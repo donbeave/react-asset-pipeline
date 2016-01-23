@@ -148,6 +148,10 @@ artifacts {
     archives javadocJar
 }
 
+task wrapper(type: Wrapper) {
+    gradleVersion = gradleWrapperVersion
+}
+
 if (System.getenv('ARTIFACTORY_CONTEXT_URL')) {
     publishing {
         publications {
