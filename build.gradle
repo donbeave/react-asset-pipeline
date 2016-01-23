@@ -1,21 +1,32 @@
-apply plugin: 'groovy'
-apply plugin: 'maven-publish'
-apply plugin: 'maven'
-
-group = 'net.errbuddy.plugins'
-version = '2.0.0'
-ext.isReleaseVersion = !version.endsWith("SNAPSHOT")
-
 buildscript {
     repositories {
         mavenLocal()
         jcenter()
     }
-    dependencies {
-        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:0.5'
-    }
 }
 
+plugins {
+    id 'io.spring.dependency-management' version '0.5.4.RELEASE'
+    id 'com.jfrog.bintray' version '1.2'
+    id 'com.jfrog.artifactory' version '4.0.0'
+}
+
+version = '2.0.1-SNAPSHOT'
+group = 'net.errbuddy.plugins'
+
+apply plugin: 'groovy'
+apply plugin: 'maven'
+apply plugin: 'maven-publish'
+apply plugin: 'eclipse'
+apply plugin: 'idea'
+
+ext {
+    gradleWrapperVersion = project.gradleWrapperVersion
+    isReleaseVersion = !version.endsWith('SNAPSHOT')
+}
+
+sourceCompatibility = 1.7
+targetCompatibility = 1.7
 
 repositories {
     mavenLocal()
@@ -34,16 +45,17 @@ sourceSets {
 }
 
 dependencies {
-    provided 'org.codehaus.groovy:groovy-all:2.0.7'
-    compile "com.bertramlabs.plugins:asset-pipeline-core:2.1.1"
+    provided 'org.codehaus.groovy:groovy-all:2.4.5'
+
+    compile 'org.codehaus.groovy:groovy:2.4.5'
+    compile 'com.bertramlabs.plugins:asset-pipeline-core:2.6.7'
     compile 'org.mozilla:rhino:1.7R4'
     compile 'log4j:log4j:1.2.17'
 
-    testCompile "org.spockframework:spock-core:0.7-groovy-2.0"
+    testCompile 'org.spockframework:spock-core:0.7-groovy-2.0'
 }
 
-apply plugin: 'com.jfrog.bintray'
-
+/*
 bintray {
     user = bintray_user
     key = bintray_key
@@ -55,7 +67,9 @@ bintray {
         userOrg = 'errbuddy'
     }
 }
+*/
 
+/*
 publishing {
     publications {
         maven(MavenPublication) {
@@ -93,7 +107,9 @@ publishing {
         }
     }
 }
+*/
 
+/*
 uploadArchives {
     repositories {
         mavenDeployer {
@@ -101,15 +117,16 @@ uploadArchives {
         }
     }
 }
+*/
+
+task sourcesJar(type: Jar, dependsOn: classes) {
+    classifier = 'sources'
+    from sourceSets.main.allSource
+}
 
 task javadocJar(type: Jar, dependsOn: javadoc) {
     classifier = 'javadoc'
-    from 'build/docs/javadoc'
-}
-
-task sourcesJar(type: Jar) {
-    classifier = 'sources'
-    from sourceSets.main.allSource
+    from javadoc.destinationDir
 }
 
 task(console, dependsOn: 'classes', type: JavaExec) {
@@ -124,5 +141,52 @@ test {
     }
 }
 
-
 uploadArchives.dependsOn build, sourcesJar, javadocJar
+
+artifacts {
+    archives sourcesJar
+    archives javadocJar
+}
+
+if (System.getenv('ARTIFACTORY_CONTEXT_URL')) {
+    publishing {
+        publications {
+            mavenJava(MavenPublication) {
+                pom.withXml {
+                    def pomNode = asNode()
+                    pomNode.dependencyManagement.replaceNode {}
+
+                    // simply remove dependencies without a version
+                    // version-less dependencies are handled with dependencyManagement
+                    // see https://github.com/spring-gradle-plugins/dependency-management-plugin/issues/8 for more complete solutions
+                    pomNode.dependencies.dependency.findAll {
+                        it.version.text().isEmpty()
+                    }.each {
+                        it.replaceNode {}
+                    }
+                }
+                from components.java
+                def descriptor =
+                        artifacts = ["build/libs/${rootProject.name}-${version}.jar", sourcesJar]
+
+            }
+        }
+    }
+    artifactory {
+        contextUrl = System.getenv('ARTIFACTORY_CONTEXT_URL')
+
+        publish {
+            defaults {
+                publications('mavenJava')
+                publishArtifacts = true
+                publishPom = true
+
+            }
+            repository {
+                repoKey = "${version.contains('SNAPSHOT') ? (System.getenv('ARTIFACTORY_SNAPSHOT_REPO_KEY') ?: 'plugins-snapshot-local') : (System.getenv('ARTIFACTORY_RELEASE_REPO_KEY') ?: 'plugins-release-local')}"
+                username = System.getenv('ARTIFACTORY_USERNAME') ?: 'admin'
+                password = System.getenv('ARTIFACTORY_PASSWORD') ?: 'password'
+            }
+        }
+    }
+}

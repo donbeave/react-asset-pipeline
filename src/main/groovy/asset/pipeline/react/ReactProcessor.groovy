@@ -3,14 +3,15 @@ package asset.pipeline.react
 import asset.pipeline.AbstractProcessor
 import asset.pipeline.AssetCompiler
 import asset.pipeline.AssetFile
-import groovy.util.logging.Log4j
+import groovy.util.logging.Commons
 import org.mozilla.javascript.Context
 import org.mozilla.javascript.Scriptable
 
-@Log4j
+@Commons
 class ReactProcessor extends AbstractProcessor {
 
-    public static final ThreadLocal threadLocal = new ThreadLocal();
+    public static final ThreadLocal threadLocal = new ThreadLocal()
+
     Scriptable globalScope
     ClassLoader classLoader
 
@@ -28,7 +29,7 @@ class ReactProcessor extends AbstractProcessor {
         cx.evaluateString(globalScope, shellJsResource.getText('UTF-8'), shellJsResource.file, 1, null)
         cx.evaluateString(globalScope, envRhinoJsResource.getText('UTF-8'), envRhinoJsResource.file, 1, null)
         cx.evaluateString(globalScope, jsxTransformerResource.getText('UTF-8'), jsxTransformerResource.file, 1, null)
-        log.info("initilized")
+        log.info('initilized')
     }
 
     String process(String input, AssetFile assetFile) {
@@ -39,8 +40,8 @@ class ReactProcessor extends AbstractProcessor {
             def cx = Context.enter()
             def compileScope = cx.newObject(globalScope)
             compileScope.setParentScope(globalScope)
-            compileScope.put("jsxSrc", compileScope, input)
-            def result = cx.evaluateString(compileScope, "JSXTransformer.transform(jsxSrc, {harmony: true}).code", "jsx command", 0, null)
+            compileScope.put('jsxSrc', compileScope, input)
+            def result = cx.evaluateString(compileScope, 'JSXTransformer.transform(jsxSrc, {harmony: true}).code', 'jsx command', 0, null)
             return result.toString()
         } catch (Exception e) {
             throw new Exception("jsx-transforming $assetFile.name failed: $e")
@@ -49,6 +50,7 @@ class ReactProcessor extends AbstractProcessor {
         }
     }
 
+    // used in shell.js
     static void print(text) {
         log.debug text
     }
