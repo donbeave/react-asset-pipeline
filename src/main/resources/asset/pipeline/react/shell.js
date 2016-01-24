@@ -1,8 +1,9 @@
 function print(text) {
-	Packages.asset.pipeline.react.ReactProcessor.print(text);
+    // Packages.asset.pipeline.react.ReactProcessor.print(text);
     // Packages.com.groovydev.less.Shell.print(text);
 }
-function quit() {}
+function quit() {
+}
 // function readFile(filename) {
 //     return new String(Packages.com.groovydev.less.Shell.readFile(filename));
 // }
